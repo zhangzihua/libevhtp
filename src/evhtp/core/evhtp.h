@@ -5,7 +5,7 @@
 
 /** @file */
 #ifndef EVHTP_DISABLE_EVTHR
-#include <evthr.h>
+#include <evhtp/thread/evhtp_thread.h>
 #endif
 
 #include <htparse.h>

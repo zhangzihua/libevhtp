@@ -1,5 +1,5 @@
-#ifndef __EVTHR_H__
-#define __EVTHR_H__
+#ifndef __EVHTP_THR_H__
+#define __EVHTP_THR_H__
 
 #include <pthread.h>
 #include <event2/event.h>
@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-enum evthr_res {
+enum evhtp_thr_res {
     EVTHR_RES_OK = 0,
     EVTHR_RES_BACKLOG,
     EVTHR_RES_RETRY,
@@ -17,56 +17,60 @@ enum evthr_res {
     EVTHR_RES_FATAL
 };
 
-struct evthr_pool;
-struct evthr;
+struct evhtp_thr_pool_s;
+struct evhtp_thr_s;
 
-typedef struct event_base evbase_t;
-typedef struct event      ev_t;
+typedef struct evhtp_thr_pool evhtp_thr_pool;
+typedef struct evhtp_thr      evhtp_thr;
+typedef enum evhtp_thr_res    evhtp_thr_res;
 
-typedef struct evthr_pool evthr_pool_t;
-typedef struct evthr      evthr_t;
-typedef enum evthr_res    evthr_res;
-
-typedef void (* evthr_cb)(evthr_t * thr, void * cmd_arg, void * shared);
-typedef void (* evthr_init_cb)(evthr_t * thr, void * shared);
-typedef void (* evthr_exit_cb)(evthr_t * thr, void * shared);
+typedef void (* evhtp_thr_cb)(evhtp_thr * thr, void * cmd_arg, void * shared);
+typedef void (* evhtp_thr_init_cb)(evhtp_thr * thr, void * shared);
+typedef void (* evhtp_thr_exit_cb)(evhtp_thr * thr, void * shared);
 
 
 /**
  * @brief creates a single new thread
- * @note to be deprecated by evthr_wexit_new
+ * @note to be deprecated by evhtp_thr_wexit_new
  *
- * @param evthr_init_cb callback to execute upon spawn
+ * @param evhtp_thr_init_cb callback to execute upon spawn
  * @param shared data which is passed to every callback
  *
  * @return NULL on error
- * @see evthr_free(), evthr_wexit_new()
+ * @see evhtp_thr_free(), evhtp_thr_wexit_new()
  */
-EVHTP_EXPORT evthr_t * evthr_new(evthr_init_cb, void *) DEPRECATED("will take on the syntax of evthr_wexit_new");
+EVHTP_EXPORT
+evhtp_thr * evhtp_thr_new(evhtp_thr_init_cb, void *)
+DEPRECATED("will take on the syntax of evhtp_thr_wexit_new");
 
 
 /**
- * @brief same as evthr_new() but execs a callback on a thread exit
+ * @brief same as evhtp_thr_new() but execs a callback on a thread exit
  *
- * @param evthr_init_cb
- * @param evthr_exit_cb
+ * @param evhtp_thr_init_cb
+ * @param evhtp_thr_exit_cb
  * @param shared
  *
  * @return
- * @see evthr_new()
+ * @see evhtp_thr_new()
  */
-EVHTP_EXPORT evthr_t * evthr_wexit_new(evthr_init_cb, evthr_exit_cb, void * shared);
+EVHTP_EXPORT
+evhtp_thr * evhtp_thr_wexit_new(
+    evhtp_thr_init_cb,
+    evhtp_thr_exit_cb,
+    void * shared);
 
 
 /**
- * @brief free all underlying data in a ssingle evthr_t
+ * @brief free all underlying data in a ssingle evhtp_thr
  *
- * @param evthr
+ * @param evhtp_thr
  *
  * @return
- * @see evthr_new(), evthr_wexit_new()
+ * @see evhtp_thr_new(), evhtp_thr_wexit_new()
  */
-EVHTP_EXPORT void evthr_free(evthr_t * evthr);
+EVHTP_EXPORT
+void evhtp_thr_free(evhtp_thr * evhtp_thr);
 
 /**
  * @brief get the thread-specific event_base
@@ -75,7 +79,8 @@ EVHTP_EXPORT void evthr_free(evthr_t * evthr);
  *
  * @return the event_base of the thread, NULL on error
  */
-EVHTP_EXPORT evbase_t * evthr_get_base(evthr_t * thr);
+EVHTP_EXPORT
+struct event_base * evhtp_thr_get_base(evhtp_thr * thr);
 
 /**
  * @brief set non-shared thread-specific arguments
@@ -84,9 +89,10 @@ EVHTP_EXPORT evbase_t * evthr_get_base(evthr_t * thr);
  * @param aux the data to set
  *
  * @return
- * @see evthr_get_aux()
+ * @see evhtp_thr_get_aux()
  */
-EVHTP_EXPORT void evthr_set_aux(evthr_t * thr, void * aux);
+EVHTP_EXPORT
+void evhtp_thr_set_aux(evhtp_thr * thr, void * aux);
 
 
 /**
@@ -95,71 +101,83 @@ EVHTP_EXPORT void evthr_set_aux(evthr_t * thr, void * aux);
  * @param thr a single thread context
  *
  * @return the threads non-shared arguments
- * @see evthr_set_aux()
+ * @see evhtp_thr_set_aux()
  */
-EVHTP_EXPORT void * evthr_get_aux(evthr_t * thr);
+EVHTP_EXPORT
+void * evhtp_thr_get_aux(evhtp_thr * thr);
 
 
 /**
  * @brief starts up the thread + event loop
  *
- * @param evthr
+ * @param evhtp_thr
  *
  * @return 0 on success, -1 on error
- * @see evthr_stop()
+ * @see evhtp_thr_stop()
  */
-EVHTP_EXPORT int evthr_start(evthr_t * evthr);
+EVHTP_EXPORT
+int evhtp_thr_start(evhtp_thr * evhtp_thr);
 
 
 /**
  * @brief stop and shutdown a thread
  *
- * @param evthr
+ * @param evhtp_thr
  *
- * @return an evthr_res
- * @see evthr_start()
+ * @return an evhtp_thr_res
+ * @see evhtp_thr_start()
  */
-EVHTP_EXPORT evthr_res evthr_stop(evthr_t * evthr);
+EVHTP_EXPORT
+evhtp_thr_res evhtp_thr_stop(evhtp_thr * evhtp_thr);
 
 
 /**
  * @brief defer a callback into a thread
  * @note any shared data needs to be reentrant
  *
- * @param evthr the evthread context
+ * @param evhtp_thr the evhtp_thread context
  * @param cb callback to execute in the thread
  * @param args arguments to be passed to the callback
  *
- * @return evthr_res
+ * @return evhtp_thr_res
  */
-EVHTP_EXPORT evthr_res evthr_defer(evthr_t * evthr, evthr_cb cb, void *);
+EVHTP_EXPORT
+evhtp_thr_res evhtp_thr_defer(
+    evhtp_thr * evhtp_thr,
+    evhtp_thr_cb cb, void *);
 
 /**
  * @brief create a new threadpool
- * @note deprecated bty evthr_pool_wexit_new
+ * @note deprecated bty evhtp_thr_pool_wexit_new
  *
  * @param nthreads number of threads
- * @param evthr_init_cb callback to execute on a new spawn
+ * @param evhtp_thr_init_cb callback to execute on a new spawn
  * @param shared args passed to the callback
  *
- * @return a evthr_pool on success, NULL on error
- * @see evthr_pool_free(), evthr_pool_wexit_new()
+ * @return a evhtp_thr_pool on success, NULL on error
+ * @see evhtp_thr_pool_free(), evhtp_thr_pool_wexit_new()
  */
-EVHTP_EXPORT evthr_pool_t * evthr_pool_new(int nthreads, evthr_init_cb, void *) DEPRECATED("will take on the syntax of evthr_pool_wexit_new");
+EVHTP_EXPORT
+evhtp_thr_pool * evhtp_thr_pool_new(int nthreads, evhtp_thr_init_cb, void *)
+DEPRECATED("will take on the syntax of evhtp_thr_pool_wexit_new");
 
 
 /**
- * @brief works like evthr_pool_new, but holds a thread on-exit callback
+ * @brief works like evhtp_thr_pool_new, but holds a thread on-exit callback
  *
  * @param nthreads number of threads
- * @param evthr_init_cb thread on-init callback
- * @param evthr_exit_cb thread on-exit callback
+ * @param evhtp_thr_init_cb thread on-init callback
+ * @param evhtp_thr_exit_cb thread on-exit callback
  * @param shared args passed to the callback
  *
- * @return evthr_pool on success, NULL on error
- * @see evthr_pool_free(), evthr_pool_new()
+ * @return evhtp_thr_pool on success, NULL on error
+ * @see evhtp_thr_pool_free(), evhtp_thr_pool_new()
  */
-EVHTP_EXPORT evthr_pool_t * evthr_pool_wexit_new(int nthreads, evthr_init_cb, evthr_exit_cb, void *);
+EVHTP_EXPORT
+evhtp_thr_pool * evhtp_thr_pool_wexit_new(
+    int nthreads,
+    evhtp_thr_init_cb,
+    evhtp_thr_exit_cb, void *);
 
 
 /**
@@ -169,9 +187,10 @@ EVHTP_EXPORT evthr_pool_t * evthr_pool_wexit_new(int nthreads, evthr_init_cb, ev
  * @param pool
  *
  * @return
- * @see evthr_pool_new(), evthr_pool_wexit_new()
+ * @see evhtp_thr_pool_new(), evhtp_thr_pool_wexit_new()
  */
-EVHTP_EXPORT void evthr_pool_free(evthr_pool_t * pool);
+EVHTP_EXPORT
+void evhtp_thr_pool_free(evhtp_thr_pool * pool);
 
 
 /**
@@ -180,9 +199,10 @@ EVHTP_EXPORT void evthr_pool_free(evthr_pool_t * pool);
  * @param pool
  *
  * @return 0 on success, -1 on error
- * @see evthr_pool_stop()
+ * @see evhtp_thr_pool_stop()
  */
-EVHTP_EXPORT int evthr_pool_start(evthr_pool_t * pool);
+EVHTP_EXPORT
+int evhtp_thr_pool_start(evhtp_thr_pool * pool);
 
 
 /**
@@ -190,10 +210,11 @@ EVHTP_EXPORT int evthr_pool_start(evthr_pool_t * pool);
  *
  * @param pool
  *
- * @return evthr res
- * @see evthr_pool_start()
+ * @return evhtp_thr res
+ * @see evhtp_thr_pool_start()
  */
-EVHTP_EXPORT evthr_res evthr_pool_stop(evthr_pool_t * pool);
+EVHTP_EXPORT
+evhtp_thr_res evhtp_thr_pool_stop(evhtp_thr_pool * pool);
 
 
 /**
@@ -204,9 +225,13 @@ EVHTP_EXPORT evthr_res evthr_pool_stop(evthr_pool_t * pool);
  * @param arg argument passed to the callback
  *
  * @return res
- * @see evthr_defer()
+ * @see evhtp_thr_defer()
  */
-EVHTP_EXPORT evthr_res evthr_pool_defer(evthr_pool_t * pool, evthr_cb cb, void * arg);
+EVHTP_EXPORT
+evhtp_thr_res evhtp_thr_pool_defer(
+    evhtp_thr_pool * pool,
+    evhtp_thr_cb     cb,
+    void           * arg);
 
 
 #ifdef __cplusplus

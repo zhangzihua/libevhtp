@@ -21,6 +21,8 @@
 
 #include <limits.h>
 #include <event2/dns.h>
+#include <event2/bufferevent.h>
+#include <event2/bufferevent_struct.h>
 
 #include "evhtp-internal.h"
 #include "evhtp_numtoa.h"
@@ -35,9 +37,6 @@ htp_log_connection(evhtp_connection_t * c) {
 }
 
 #endif
-
-
-
 
 static int _evhtp_request_parser_start(htparser * p);
 static int _evhtp_request_parser_host(htparser * p, const char * data, size_t len);
@@ -1780,9 +1779,17 @@ _evhtp_connection_resumecb(int fd, short events, void * arg) {
      */
 
     if (evbuffer_get_length(bufferevent_get_output(c->bev))) {
-        bufferevent_enable(c->bev, EV_WRITE);
         c->waiting = 1;
+        /* libevent2 will not automatically start writing if the
+         * flag is twiddled off and then back on again (even with
+         * pending data). So for the time being we use the exposed
+         * bufferevent structure and manually activate the write
+         * event.
+         */
+        bufferevent_enable(c->bev, EV_WRITE);
+        event_active(&c->bev->ev_write, EV_WRITE, 1);
     } else {
+	c->waiting = 0;
         bufferevent_enable(c->bev, EV_READ | EV_WRITE);
         _evhtp_connection_readcb(c->bev, c);
     }

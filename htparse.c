@@ -369,6 +369,12 @@ htparser_get_error(htparser * p) {
     return p->error;
 }
 
+int
+htparser_set_error(htparser * p, htpparse_error err) {
+    p->error = err;
+    return 0;
+}
+
 const char *
 htparser_get_strerror(htparser * p) {
     htpparse_error e = htparser_get_error(p);

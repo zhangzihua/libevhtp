@@ -68,8 +68,8 @@ typedef enum htp_method      htp_method;
 typedef enum htp_type        htp_type;
 typedef enum htpparse_error  htpparse_error;
 
-typedef int (* htparse_hook)(htparser *);
-typedef int (* htparse_data_hook)(htparser *, const char *, size_t);
+typedef int (*htparse_hook)(htparser *);
+typedef int (*htparse_data_hook)(htparser *, const char *, size_t);
 
 
 struct htparse_hooks {
@@ -110,6 +110,7 @@ EVHTP_EXPORT uint64_t       htparser_get_content_length(htparser *);
 EVHTP_EXPORT uint64_t       htparser_get_content_pending(htparser *);
 EVHTP_EXPORT uint64_t       htparser_get_total_bytes_read(htparser *);
 EVHTP_EXPORT htpparse_error htparser_get_error(htparser *);
+EVHTP_EXPORT int            htparser_set_error(htparser *, htpparse_error);
 EVHTP_EXPORT const char   * htparser_get_strerror(htparser *);
 EVHTP_EXPORT void         * htparser_get_userdata(htparser *);
 EVHTP_EXPORT void           htparser_set_userdata(htparser *, void *);

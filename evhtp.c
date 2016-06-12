@@ -375,11 +375,15 @@ _evhtp_quick_hash(const char * str) {
  */
 static inline evhtp_proto
 _evhtp_protocol(const char major, const char minor) {
+    htp_log_debug("enter");
+
     if (_evhtp_is_http_10(major, minor)) {
+        htp_log_debug("HTTP/1.0 request");
         return EVHTP_PROTO_10;
     }
 
     if (_evhtp_is_http_11(major, minor)) {
+        htp_log_debug("HTTP/1.1 request");
         return EVHTP_PROTO_11;
     }
 
@@ -773,6 +777,8 @@ _evhtp_request_new(evhtp_connection_t * c) {
  */
 static void
 _evhtp_request_free(evhtp_request_t * request) {
+    htp_log_debug("enter");
+
     if (evhtp_unlikely(request == NULL)) {
         return;
     }
@@ -797,6 +803,8 @@ _evhtp_request_free(evhtp_request_t * request) {
 
     evhtp_safe_free(request->hooks, free);
     evhtp_safe_free(request, free);
+
+    htp_log_debug("exit");
 }
 
 /**
@@ -807,6 +815,8 @@ _evhtp_request_free(evhtp_request_t * request) {
 static evhtp_uri_t *
 _evhtp_uri_new(void) {
     evhtp_uri_t * uri;
+
+    htp_log_debug("enter");
 
     if (!(uri = calloc(sizeof(evhtp_uri_t), 1))) {
         return NULL;
@@ -819,6 +829,8 @@ _evhtp_uri_new(void) {
 
         return NULL;
     }
+
+    htp_log_debug("exit");
 
     return uri;
 }
@@ -1022,8 +1034,10 @@ _evhtp_request_parser_start(htparser * p) {
 
     if (c->request) {
         if (c->request->finished == 1) {
+            htp_log_debug("c->request == finished, freeing request");
             _evhtp_request_free(c->request);
         } else {
+            htp_log_debug("c->request not finished, returning -1");
             return -1;
         }
     }
@@ -1581,7 +1595,10 @@ static int
 _evhtp_request_parser_fini(htparser * p) {
     evhtp_connection_t * c = htparser_get_userdata(p);
 
+    htp_log_debug("start");
+
     if (c->paused == 1) {
+        htp_log_debug("connection is paused, returning -1");
         return -1;
     }
 
@@ -1620,6 +1637,7 @@ _evhtp_request_parser_fini(htparser * p) {
     }
 
     if (c->paused == 1) {
+        htp_log_debug("c->paused == 1, returning -1");
         return -1;
     }
 
@@ -1756,8 +1774,22 @@ check_proto:
 }     /* _evhtp_create_reply */
 
 static void
+_evhtp_connection_resume_readcb(int fd, short events, void * arg) {
+    evhtp_connection_t * c = arg;
+
+    htp_log_debug("enter");
+
+    htp_log_debug("calling readcb");
+    _evhtp_connection_readcb(c->bev, c);
+
+    htp_log_debug("exit");
+}
+
+static void
 _evhtp_connection_resumecb(int fd, short events, void * arg) {
     evhtp_connection_t * c = arg;
+
+    htp_log_debug("resuming connection %p", c);
 
     c->paused = 0;
 
@@ -1766,6 +1798,7 @@ _evhtp_connection_resumecb(int fd, short events, void * arg) {
     }
 
     if (c->free_connection == 1) {
+        htp_log_debug("free_connection == 1, freeing the connection!");
         evhtp_connection_free(c);
 
         return;
@@ -1779,6 +1812,7 @@ _evhtp_connection_resumecb(int fd, short events, void * arg) {
      */
 
     if (evbuffer_get_length(bufferevent_get_output(c->bev))) {
+        htp_log_debug("setting the wait flag to 1");
         c->waiting = 1;
         /* libevent2 will not automatically start writing if the
          * flag is twiddled off and then back on again (even with
@@ -1786,12 +1820,20 @@ _evhtp_connection_resumecb(int fd, short events, void * arg) {
          * bufferevent structure and manually activate the write
          * event.
          */
+        htp_log_debug("enabling EV_WRITE");
         bufferevent_enable(c->bev, EV_WRITE);
+
+        htp_log_debug("activating EV_WRITE");
         event_active(&c->bev->ev_write, EV_WRITE, 1);
     } else {
-	c->waiting = 0;
+        htp_log_debug("no output, set waiting to 0 and enabling EV_READ|WRITE");
+        c->waiting = 0;
         bufferevent_enable(c->bev, EV_READ | EV_WRITE);
-        _evhtp_connection_readcb(c->bev, c);
+        /*
+         * event_active(&c->bev->ev_read, EV_READ, 1);
+         * _evhtp_connection_readcb(c->bev, c);
+         */
+        event_active(c->resume_read_ev, EV_READ, 1);
     }
 }
 
@@ -1856,9 +1898,13 @@ _evhtp_connection_readcb(evbev_t * bev, void * arg) {
     if (c->request && c->request->status == EVHTP_RES_PAUSE) {
         evhtp_request_pause(c->request);
     } else if (htparser_get_error(c->parser) != htparse_error_none) {
-        evhtp_connection_free(c);
+        htp_log_debug("htparser is in another state: %d (%s), freeing connection",
+                      htparser_get_error(c->parser),
+                      htparser_get_strerror(c->parser));
+        evhtp_safe_free(c, evhtp_connection_free);
     } else if (nread < avail) {
         /* we still have more data to read (piped request probably) */
+        htp_log_debug("nread < avail, resuming connection");
         evhtp_connection_resume(c);
     }
 } /* _evhtp_connection_readcb */
@@ -1870,26 +1916,38 @@ _evhtp_connection_writecb(evbev_t * bev, void * arg) {
     htp_log_debug("c->request = %p", c->request);
 
     if (evhtp_unlikely(c->request == NULL)) {
+        htp_log_debug("c->request == NULL");
         return;
     }
 
     _evhtp_connection_write_hook(c);
 
     if (evhtp_unlikely(c->paused == 1)) {
+        htp_log_debug("c->paused == 1");
         return;
     }
 
     if (evhtp_unlikely(c->waiting == 1)) {
+        htp_log_debug("c->waiting == 1");
         c->waiting = 0;
 
         bufferevent_enable(bev, EV_READ);
 
         if (evbuffer_get_length(bufferevent_get_input(bev))) {
-            _evhtp_connection_readcb(bev, arg);
+            htp_log_debug("activating read callback");
+            /*
+             * event_active(&c->bev->ev_read, EV_READ, 1);
+             * _evhtp_connection_readcb(bev, arg);
+             */
+            event_active(c->resume_read_ev, EV_READ, 1);
         }
 
         return;
     }
+
+    htp_log_debug("request finished == %d, outlen = %zu",
+                  c->request->finished,
+                  evbuffer_get_length(bufferevent_get_output(bev)));
 
     if (c->request->finished == 0 || evbuffer_get_length(bufferevent_get_output(bev))) {
         return;
@@ -1907,6 +1965,7 @@ _evhtp_connection_writecb(evbev_t * bev, void * arg) {
     }
 
     if (c->request->keepalive == 1) {
+        htp_log_debug("keepalive enabled, freeing request");
         _evhtp_request_free(c->request);
 
         c->keepalive       = 1;
@@ -1929,6 +1988,7 @@ _evhtp_connection_writecb(evbev_t * bev, void * arg) {
 
         return;
     } else {
+        htp_log_debug("keepalive is not enabled, freeing connection");
         evhtp_connection_free(c);
 
         return;
@@ -1940,6 +2000,8 @@ _evhtp_connection_writecb(evbev_t * bev, void * arg) {
 static void
 _evhtp_connection_eventcb(evbev_t * bev, short events, void * arg) {
     evhtp_connection_t * c = arg;
+
+    htp_log_debug("events == %d", events);
 
     if (c->hooks && c->hooks->on_event) {
         (c->hooks->on_event)(c, events, c->hooks->on_event_arg);
@@ -1969,6 +2031,8 @@ _evhtp_connection_eventcb(evbev_t * bev, short events, void * arg) {
 #endif
 
     if (events == (BEV_EVENT_EOF | BEV_EVENT_READING)) {
+        htp_log_debug("errno is %d (%s)", errno, strerror(errno));
+
         if (errno == EAGAIN) {
             /* libevent will sometimes recv again when it's not actually ready,
              * this results in a 0 return value, and errno will be set to EAGAIN
@@ -1978,6 +2042,8 @@ _evhtp_connection_eventcb(evbev_t * bev, short events, void * arg) {
              * but libevent will disable the read side of the bufferevent
              * anyway, so we must re-enable it.
              */
+            htp_log_debug("got an EAGAIN, enabling EV_READ again");
+
             bufferevent_enable(bev, EV_READ);
             errno = 0;
 
@@ -1994,8 +2060,10 @@ _evhtp_connection_eventcb(evbev_t * bev, short events, void * arg) {
         /* we are currently paused, so we don't want to free just yet, let's
          * wait till the next loop.
          */
+        htp_log_debug("connection paused, but needs to be freed");
         c->free_connection = 1;
     } else {
+        htp_log_debug("not paused: freeing connection");
         evhtp_connection_free((evhtp_connection_t *)arg);
     }
 } /* _evhtp_connection_eventcb */
@@ -2075,7 +2143,12 @@ end:
 
     connection->resume_ev = event_new(evbase, -1, EV_READ | EV_PERSIST,
                                       _evhtp_connection_resumecb, connection);
+
+    connection->resume_read_ev   = event_new(evbase, -1, EV_READ | EV_PERSIST,
+                                      _evhtp_connection_resume_readcb, connection);
+
     event_add(connection->resume_ev, NULL);
+    event_add(connection->resume_read_ev, NULL);
 
     bufferevent_enable(connection->bev, EV_READ);
     bufferevent_setcb(connection->bev,
@@ -2394,6 +2467,7 @@ void
 evhtp_connection_resume(evhtp_connection_t * c) {
     evhtp_assert(c != NULL);
 
+    htparser_set_error(c->parser, htparse_error_none);
     c->paused = 0;
 
     event_active(c->resume_ev, EV_WRITE, 1);
@@ -3046,7 +3120,7 @@ evhtp_send_reply_start(evhtp_request_t * request, evhtp_res code) {
     c = evhtp_request_get_connection(request);
 
     if (!(reply_buf = _evhtp_create_reply(request, code))) {
-        evhtp_connection_free(c);
+        evhtp_safe_free(c, evhtp_connection_free);
 
         return;
     }
@@ -4094,6 +4168,9 @@ evhtp_request_set_max_body_size(evhtp_request_t * req, uint64_t len) {
 
 void
 evhtp_connection_free(evhtp_connection_t * connection) {
+    htp_log_debug("enter");
+
+
     if (evhtp_unlikely(connection == NULL)) {
         return;
     }
@@ -4125,6 +4202,8 @@ evhtp_connection_free(evhtp_connection_t * connection) {
     }
 
     evhtp_safe_free(connection, free);
+
+    htp_log_debug("exit");
 }     /* evhtp_connection_free */
 
 void

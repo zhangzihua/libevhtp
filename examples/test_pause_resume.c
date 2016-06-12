@@ -20,17 +20,19 @@ struct pause_ctx_ {
 
 static void
 test_resume(evutil_socket_t sock, short which, void * arg) {
-    struct pause_ctx_ * ctx = arg;
-    struct evbuffer   * buf;
+    struct pause_ctx_  * ctx = arg;
+    struct evbuffer    * buf;
+    struct bufferevent * bev = evhtp_request_get_bev(ctx->req);
 
     printf("%d\n", ctx->count);
 
     if (--ctx->count == 0) {
-        evhtp_request_resume(ctx->req);
         evhtp_send_reply_chunk_end(ctx->req);
+        evhtp_request_resume(ctx->req);
 
-	event_free(ctx->ev);
+        event_free(ctx->ev);
         free(ctx);
+        return;
     } else {
         buf = evbuffer_new();
         evbuffer_add_printf(buf, "%d\n", ctx->count);

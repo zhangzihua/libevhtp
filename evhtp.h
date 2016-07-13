@@ -429,6 +429,9 @@ struct evhtp_request_s {
     evhtp_callback_cb cb;               /**< the function to call when fully processed */
     void            * cbarg;            /**< argument which is passed to the cb function */
 
+    // added by zzh
+    void    * data;
+
     TAILQ_ENTRY(evhtp_request_s) next;
 };
 
@@ -463,6 +466,9 @@ struct evhtp_connection_s {
                       free_connection : 1,
                       keepalive       : 1;      /**< set to 1 after the first request has been processed and the connection is kept open */
     struct ev_token_bucket_cfg * ratelimit_cfg; /**< connection-specific ratelimiting configuration. */
+
+    // added by zzh
+    void    * data;
 
 #ifdef EVHTP_FUTURE_USE
     TAILQ_HEAD(, evhtp_request_s) pending;      /**< client pending data */
@@ -1283,6 +1289,38 @@ evhtp_connection_new_dns(evbase_t * evbase,
  */
 EVHTP_EXPORT evhtp_connection_t *
 evhtp_connection_new(evbase_t * evbase, const char * addr, uint16_t port);
+
+
+// added by zzh
+
+/**
+ * @brief set data to a connection
+ */
+EVHTP_EXPORT void evhtp_connection_set_data(evhtp_connection_t * c, void* data);
+
+// added by zzh
+
+/**
+ * @brief get data from a connection
+ */
+EVHTP_EXPORT void* evhtp_connection_get_data(evhtp_connection_t * c);
+
+// added by zzh
+
+/**
+ * @brief set data to a request
+ */
+EVHTP_EXPORT void evhtp_request_set_data(evhtp_request_t * r, void* data);
+
+// added by zzh
+
+/**
+ * @brief get data from a request
+ */
+EVHTP_EXPORT void* evhtp_request_get_data(evhtp_request_t * r);
+
+
+
 
 #ifndef DISABLE_SSL
 evhtp_connection_t * evhtp_connection_ssl_new(evbase_t * evbase, const char * addr, uint16_t port, evhtp_ssl_ctx_t * ctx);

@@ -748,6 +748,9 @@ _evhtp_request_new(evhtp_connection_t * c) {
         return NULL;
     }
 
+    // added by zzh
+    req->data   = NULL;
+    
     error       = 1;
     req->conn   = c;
     req->htp    = c ? c->htp : NULL;
@@ -2079,6 +2082,8 @@ _evhtp_connection_new(evhtp_t * htp, evutil_socket_t sock, evhtp_type type) {
     if (!(connection = calloc(sizeof(evhtp_connection_t), 1))) {
         return NULL;
     }
+    // added by zzh
+    connection->data      = NULL;
 
     connection->error     = 0;
     connection->owner     = 1;
@@ -4173,6 +4178,31 @@ evhtp_connection_set_rate_limit(evhtp_connection_t * conn,
 /*****************************************************************
 * client request functions                                      *
 *****************************************************************/
+    
+    
+// added by zzh
+void evhtp_connection_set_data(evhtp_connection_t * c, void* data)
+{
+    c->data = data;
+}
+
+// added by zzh
+void* evhtp_connection_get_data(evhtp_connection_t * c)
+{
+    return c->data;
+}
+
+// added by zzh
+void evhtp_request_set_data(evhtp_request_t * r, void* data)
+{
+    r->data = data;
+}
+
+// added by zzh
+void* evhtp_request_get_data(evhtp_request_t * r)
+{
+    return r->data;
+}   
 
 evhtp_connection_t *
 evhtp_connection_new(evbase_t * evbase, const char * addr, uint16_t port) {

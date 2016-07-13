@@ -49,6 +49,7 @@ endif()
 
 if (EVHTP_HAS_VISIBILITY_HIDDEN)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+    add_definitions(-DEVHTP_HAS_VISIBILITY_HIDDEN)
 endif()
 
 if (NOT HAVE_SYS_TREE)

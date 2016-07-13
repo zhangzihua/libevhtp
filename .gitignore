@@ -3,3 +3,11 @@
 #
 # they aren't going into version control, but shouldn't be
 # completely ignored. I'm removing the mods here.
+#
+
+
+
+build/*
+
+
+

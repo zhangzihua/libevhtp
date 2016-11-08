@@ -1548,6 +1548,11 @@ static int
 _evhtp_should_parse_query_body(evhtp_request_t * req) {
     const char * content_type;
 
+    // modified by zzh
+    // do not support application/x-www-form-urlencoded
+    // alway return 0
+    return 0;
+
     if (req == NULL) {
         return 0;
     }

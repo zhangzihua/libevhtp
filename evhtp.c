@@ -1647,12 +1647,14 @@ static evbuf_t *
 _evhtp_create_reply(evhtp_request_t * request, evhtp_res code) {
     evbuf_t     * buf;
     const char  * content_type;
-    char          res_buf[2048];
-    int           sres;
+//      char          res_buf[2048];
+//      int           sres;
     size_t        out_len;
     unsigned char major;
     unsigned char minor;
     char          out_buf[64];
+    
+    const char*   status_str;
 
 
     content_type = evhtp_header_find(request->headers_out, "Content-Type");
@@ -1729,22 +1731,32 @@ check_proto:
 
     evhtp_modp_u32toa((uint32_t)code, out_buf);
 
-    sres  = snprintf(res_buf, sizeof(res_buf), "HTTP/%c.%c %s %s\r\n",
-                     major, minor, out_buf, status_code_to_str(code));
-
-    if (sres >= sizeof(res_buf) || sres < 0) {
-        /* failed to fit the whole thing in the res_buf, so just fallback to
-         * using evbuffer_add_printf().
-         */
-        evbuffer_add_printf(buf, "HTTP/%c.%c %d %s\r\n",
-                            major, minor,
-                            code, status_code_to_str(code));
-    } else {
-        /* copy the res_buf using evbuffer_add() instead of add_printf() */
-        evbuffer_add(buf, res_buf, sres);
-    }
-
-
+// modify by zzh 
+//      sres  = snprintf(res_buf, sizeof(res_buf), "HTTP/%c.%c %s %s\r\n",
+//                       major, minor, out_buf, status_code_to_str(code));
+//  
+//      if (sres >= sizeof(res_buf) || sres < 0) {
+//          /* failed to fit the whole thing in the res_buf, so just fallback to
+//           * using evbuffer_add_printf().
+//           */
+//          evbuffer_add_printf(buf, "HTTP/%c.%c %d %s\r\n",
+//                              major, minor,
+//                              code, status_code_to_str(code));
+//      } else {
+//          /* copy the res_buf using evbuffer_add() instead of add_printf() */
+//          evbuffer_add(buf, res_buf, sres);
+//      }
+    status_str = status_code_to_str(code);
+    evbuffer_add(buf, "HTTP/", 5);
+    evbuffer_add(buf, &major, 1);
+    evbuffer_add(buf, ".", 1);
+    evbuffer_add(buf, &minor, 1);
+    evbuffer_add(buf, " ", 1);
+    evbuffer_add(buf, out_buf, strlen(out_buf));
+    evbuffer_add(buf, " ", 1);
+    evbuffer_add(buf, status_str, strlen(status_str));
+    evbuffer_add(buf, "\r\n", 2);
+    
     evhtp_headers_for_each(request->headers_out, _evhtp_create_headers, buf);
     evbuffer_add(buf, "\r\n", 2);
 

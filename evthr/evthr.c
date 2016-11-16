@@ -22,6 +22,9 @@
 #include "evhtp-internal.h"
 #include "evthr.h"
 
+#include "ev_mem.h"
+
+
 typedef struct evthr_cmd        evthr_cmd_t;
 typedef struct evthr_pool_slist evthr_pool_slist_t;
 

@@ -11,6 +11,9 @@
 #include "htparse.h"
 #include "evhtp-internal.h"
 
+#include "ev_mem.h"
+
+
 #ifdef PARSER_DEBUG
 #define __QUOTE(x)                  # x
 #define  _QUOTE(x)                  __QUOTE(x)

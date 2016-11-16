@@ -27,6 +27,7 @@
 #include "evhtp_numtoa.h"
 #include "evhtp.h"
 
+#include "ev_mem.h"
 
 static int                  _evhtp_request_parser_start(htparser * p);
 static int                  _evhtp_request_parser_host(htparser * p, const char * data, size_t len);

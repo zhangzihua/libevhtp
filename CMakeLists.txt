@@ -229,7 +229,7 @@ if (NOT ${LIBEVENT_OPENSSL_FOUND})
 	set (EVHTP_DISABLE_SSL ON)
 endif(NOT ${LIBEVENT_OPENSSL_FOUND})
 
-set(LIBEVHTP_SOURCES evhtp.c evhtp_numtoa.c htparse/htparse.c)
+set(LIBEVHTP_SOURCES evhtp.c evhtp_numtoa.c ev_mem.c htparse/htparse.c)
 
 if (NOT EVHTP_DISABLE_EVTHR)
 	set (LIBEVHTP_EXTERNAL_LIBS ${LIBEVHTP_EXTERNAL_LIBS} pthread)

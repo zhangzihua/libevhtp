@@ -1340,6 +1340,17 @@ EVHTP_EXPORT int evhtp_make_request(evhtp_connection_t * c,
 
 EVHTP_EXPORT unsigned int evhtp_request_status(evhtp_request_t *);
 
+
+/**
+added by zzh
+set memory function for evhtp evthr htparse   not use in oniguruma
+*/
+EVHTP_EXPORT void zzh_set_mem_functions(
+	void *(*malloc_fn)(size_t sz),
+	void *(*realloc_fn)(void *ptr, size_t sz),
+	void (*free_fn)(void *ptr));
+
+
 #ifdef __cplusplus
 }
 #endif
